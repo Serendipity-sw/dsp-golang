@@ -1,0 +1,6 @@
+dsp-golang
+dsp-golang.exe
+dsp-golang.pid
+dsp-golang\.*
+jstmp/*
+/.idea
