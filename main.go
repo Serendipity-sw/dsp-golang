@@ -101,6 +101,17 @@ func serverRun(cfn string, debug bool) {
 	go rt.Run(port)
 }
 
+/**
+验证授权 重载gin
+创建人:邵炜
+创建时间:2016年3月8日18:01:55
+ */
+func verifyAuthorization() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
 
 /**
 结束进程
