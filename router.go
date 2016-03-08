@@ -5,6 +5,7 @@ import (
 	"github.com/smtc/glog"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -37,4 +38,37 @@ func getAssetFilePath(pth string) (string, error) {
 		}
 	}
 	return path.Join(sentrys...), nil
+}
+
+/**
+图片文件提取
+创建人:邵炜
+创建时间:2016年3月7日11:47:17
+输入参数: gin对象
+输出参数: 无
+数据反馈由gin对象进行
+*/
+func imageGet(c *gin.Context) {
+	idStr := c.Param("name")
+
+	id, err := strconv.Atoi(idStr)
+
+	if err != nil {
+		glog.Error("imageGet param is error, err: %s \n", err.Error())
+		c.String(http.StatusOK, "image bytes is empty")
+		return
+	}
+
+	_imageFile.Lock()
+
+	fileName,ok:=_imageFile.imageFile[id]
+
+	defer _imageFile.Unlock()
+
+	if !ok {
+		glog.Error("imageGet _imageFile array can't find file , id: %s \n",id)
+		return
+	}
+
+	http.ServeFile(c.Writer,c.Request,fileName.pictureName)
 }

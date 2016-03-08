@@ -8,6 +8,9 @@ import (
 	"github.com/smtc/glog"
 	"runtime"
 	"strings"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -17,6 +20,7 @@ var (
 	tempDir    string                                                       //模版目录
 	contentDir string                                                       //脚本目录
 	rt         *gin.Engine
+temp string //临时文件存储目录
 )
 
 /**
@@ -33,6 +37,18 @@ func main() {
 	flag.Parse()
 
 	serverRun(*configFn, *debugFlag)
+
+	c := make(chan os.Signal, 1)
+	writePid()
+	// 信号处理
+	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM)
+	// 等待信号
+	<-c
+
+	serverExit()
+	rmPidFile()
+	imageFileDelete()
+	os.Exit(0)
 }
 
 /**
@@ -42,6 +58,7 @@ func main() {
 输入参数: cfn(配置文件地址) debug(是否为调试模式)
 */
 func serverRun(cfn string, debug bool) {
+
 	config.ReadCfg(cfn)
 
 	logInit(debug)
@@ -49,6 +66,8 @@ func serverRun(cfn string, debug bool) {
 	rootPrefix = strings.TrimSpace(config.GetStringMust("rootPrefix"))
 	tempDir = strings.TrimSpace(config.GetStringMust("tempDir"))
 	contentDir = strings.TrimSpace(config.GetStringMust("contentDir"))
+	port:=strings.TrimSpace(config.GetStringMust("port"))
+	temp=strings.TrimSpace(config.GetStringMust("temp"))
 
 	if len(rootPrefix) != 0 {
 		if !strings.HasPrefix(rootPrefix, "/") {
@@ -78,6 +97,25 @@ func serverRun(cfn string, debug bool) {
 	rt = gin.Default()
 
 	router(rt)
+
+	go rt.Run(port)
+}
+
+
+/**
+结束进程
+创建人:邵炜
+创建时间:2016年3月7日14:21:24
+ */
+func serverExit() {
+	// 结束所有go routine
+	deferinit.StopRoutines()
+	glog.Info("stop routine successfully.\n")
+
+	deferinit.FiniAll()
+	glog.Info("fini all modules successfully.\n")
+
+	glog.Close()
 }
 
 /**
@@ -96,5 +134,7 @@ func router(r *gin.Engine) {
 		g.GET("/", func(c *gin.Context) { c.String(200, "ok") })
 
 		g.GET("/assets/*pth", assetsFiles)
+
+		g.GET("/images/:name",imageGet)
 	}
 }

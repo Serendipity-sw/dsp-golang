@@ -8,7 +8,23 @@ import (
 	"html/template"
 	"sync"
 	"time"
+	"github.com/guotie/config"
+"strings"
+	"encoding/base64"
+	"fmt"
+	"os"
+	"io"
+	"io/ioutil"
 )
+
+type imageFileStruct struct {
+		pictureName string
+}
+
+type imageFileMap struct {
+	sync.RWMutex
+	imageFile map[int]imageFileStruct
+}
 
 var (
 	jsTmr    *time.Timer
@@ -20,9 +36,19 @@ var (
 			return template.URL(s)
 		},
 	}
+
+	_imageFile=imageFileMap{
+		imageFile:map[int]imageFileStruct{},
+	}
 )
 
 func init() {
+	deferinit.AddInit(func() {
+		tempDir = config.GetStringDefault("tempDir", "template/")
+		if !strings.HasSuffix(tempDir, "/"){
+			tempDir += "/"
+		}
+	}, nil, 40)
 	deferinit.AddRoutine(notifyTemplates)
 	deferinit.AddRoutine(watchJsDir)
 }
@@ -43,7 +69,7 @@ func watchJsDir(ch chan struct{}, wg *sync.WaitGroup) {
 
 	jsTmr = time.NewTimer(time.Minute)
 	for {
-
+		imageFile()
 		jsTmr.Reset(time.Minute)
 		<-jsTmr.C
 	}
@@ -56,7 +82,7 @@ func watchJsDir(ch chan struct{}, wg *sync.WaitGroup) {
 输入参数: gin对象
 */
 func loadTemplates(e *gin.Engine) {
-	t, err := template.New("tmpls").Funcs(funcName).ParseGlob(tempDir)
+	t, err := template.New("tmpls").Funcs(funcName).ParseGlob(tempDir+"*")
 
 	if err != nil {
 		glog.Error("loadTemplates failed: %s %s \n", tempDir, err.Error())
@@ -103,4 +129,91 @@ func notifyTemplates(ch chan struct{}, wg *sync.WaitGroup) {
 	/* ... do clean stuff ... */
 	watcher.Close()
 	wg.Done()
+}
+
+/**
+图片流处理
+创建人:邵炜
+创建时间:2016年3月8日14:20:41
+ */
+func imageFile() {
+	imageArray,err:=selectImageAll()
+
+	if err != nil {
+		glog.Error("imageFile selectImage is error, err: %s \n",err.Error())
+		return
+	}
+
+	_imageFile.Lock()
+
+	_imageFile.imageFile=map[int]imageFileStruct{}
+
+	imageFileDelete()
+
+	defer _imageFile.Unlock()
+
+	for _,value:=range *imageArray  {
+
+		images:=strings.Split(value.pictureByte,",")
+
+		reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(images[1]))
+
+		imageName:=strings.Split(strings.Split(images[0],";")[0],"/")[1]
+
+		fileName:=fmt.Sprintf(temp+"/%d%d.%s",time.Now().Unix(),value.id,imageName)
+
+		file, err := os.Create(fileName)
+
+		if err != nil {
+			glog.Error("image create is error, err: %s \n",err.Error())
+			file.Close()
+			continue
+		}
+
+		_, err = io.Copy(file,reader)
+
+		if err != nil {
+			glog.Error("image copy is error, err: %s \n",err.Error())
+			file.Close()
+			continue
+		}
+
+		_imageFile.imageFile[value.id]=imageFileStruct{
+			pictureName:fileName,
+		}
+
+		file.Close()
+	}
+
+	glog.Info("image save computer file is success \n")
+}
+
+/**
+图片资源清除
+创建人:邵炜
+创建时间:2016年3月8日16:43:10
+ */
+func imageFileDelete() {
+	files,err:=ioutil.ReadDir(temp+"/")
+
+	if err != nil {
+		glog.Error("imageFileDelete can't search files, error: %s \n",err.Error() )
+		return
+	}
+
+	for _,file:=range files  {
+		if file.IsDir() {
+			continue
+		}
+
+		fileName:=fmt.Sprintf("%s/%s",temp,file.Name())
+
+		err=os.Remove(fileName)
+
+		if err != nil {
+			glog.Error("imageFileDelete can't delete file, fileName: %s  err: %s \n",fileName,err.Error())
+		}
+	}
+
+	glog.Info("imageFileDelete delete file is perfection! \n")
 }
