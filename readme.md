@@ -2,7 +2,7 @@
 
 ## 框架须知请参考
 
-    框架项目目标地址:https://github.com/swgloomy/webframe
+框架项目目标地址: [亲,touch me](https://github.com/swgloomy/webframe)
     
 ## 项目说明描述
     
