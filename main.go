@@ -21,6 +21,7 @@ var (
 	contentDir string                                                       //脚本目录
 	rt         *gin.Engine
 temp string //临时文件存储目录
+cookieName string //cookie名称
 )
 
 /**
@@ -68,6 +69,7 @@ func serverRun(cfn string, debug bool) {
 	contentDir = strings.TrimSpace(config.GetStringMust("contentDir"))
 	port:=strings.TrimSpace(config.GetStringMust("port"))
 	temp=strings.TrimSpace(config.GetStringMust("temp"))
+	cookieName=strings.TrimSpace(config.GetStringMust("cookieName"))
 
 	if len(rootPrefix) != 0 {
 		if !strings.HasPrefix(rootPrefix, "/") {
@@ -108,6 +110,12 @@ func serverRun(cfn string, debug bool) {
  */
 func verifyAuthorization() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		_,err:=c.Request.Cookie(cookieName) //未实现
+		if err != nil {
+			glog.Error("can't find coodie , cookieName: %s ,err: %s \n",cookieName,err.Error())
+			return
+		}
+
 
 	}
 }

@@ -11,5 +11,6 @@
   "redisAddr":"10.10.188.10:6379",
   "redisDatabase":5,
   "port":":8000",
-  "temp":"./temp"
+  "temp":"./temp",
+  "cookieName":"gloomy"
 }
